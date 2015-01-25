@@ -1,5 +1,6 @@
 #pragma once
-namespace n_bodies {
+// not in namespace so it's accessible from cuda
 typedef float K;
 const int DIMENSIONS = 2;
-} // namespace n_bodies
+const K EPS2 = 0.1f;
+const int BRUTE_THREADS_PER_BLOCK = 32;
