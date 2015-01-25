@@ -19,9 +19,11 @@ int main() {
         bodies.push_back(n_bodies::Body(mass, {pos_x, pos_y}, {acc_x, acc_y}));
     }
     float tick = 0.1f;
-    auto result = n_bodies::simulate(bodies, tick);
+    CUdeviceptr cu_bodies = moveBodiesToDevice(bodies);
+    auto result = n_bodies::simulate(cu_bodies, n,tick);
     for (const auto& body : result) {
         std::cout << body << std::endl; 
     }
+    cuMemFree(cu_bodies);
     return 0;
 }

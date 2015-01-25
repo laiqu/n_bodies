@@ -9,12 +9,11 @@ extern CUdevice cuDevice;
 extern CUcontext cuContext;
 extern CUmodule cuModule;
 
-std::vector<Body> simulate(const std::vector<Body>& bodies, K tick,
-        int dims=DIMENSIONS);
-std::vector<Body> simulate(Body const* bodies, int n, K tick,
-        int dims=DIMENSIONS);
 std::vector<Body> simulate(CUdeviceptr& bodies, int n, K tick,
         int dims=DIMENSIONS);
+
+CUdeviceptr moveBodiesToDevice(const std::vector<Body>& bodies);
+CUdeviceptr moveBodiesToDevice(Body const* bodies, int n);
 
 bool init();
 }

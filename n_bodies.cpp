@@ -6,15 +6,11 @@ CUdevice cuDevice;
 CUcontext cuContext;
 CUmodule cuModule;
 
-std::vector<Body> simulate(const std::vector<Body>& bodies, K tick,
-        int dims) {
-    return simulate(&bodies[0], bodies.size(), tick, dims);
+CUdeviceptr moveBodiesToDevice(const std::vector<Body>& bodies) {
+    return moveBodiesToDevice(&bodies[0], bodies.size());
 }
 
-std::vector<Body> simulate(Body const* bodies, int n, K tick, int dims) {
-    if (n == 0) {
-        return std::vector<Body>();
-    }
+CUdeviceptr moveBodiesToDevice(Body const* bodies, int n) {
     CUdeviceptr cu_bodies;
     int data_size = n * bodies[0].body_byte_size();
     cuMemAlloc(&cu_bodies, data_size);
@@ -25,11 +21,10 @@ std::vector<Body> simulate(Body const* bodies, int n, K tick, int dims) {
             data.end(), bodies[i].position.begin(), bodies[i].position.end());
     }
     cuMemcpyHtoD(cu_bodies, &bodies[0], data_size);
-    return simulate(cu_bodies, n, tick, dims);
+    return cu_bodies;
 }
 
-std::vector<Body> simulate(
-        CUdeviceptr& bodies, int n, K tick, int dims) {
+std::vector<Body> simulate(CUdeviceptr& bodies, int n, K tick, int dims) {
     return std::vector<Body>();
 }
 
