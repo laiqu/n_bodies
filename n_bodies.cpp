@@ -6,7 +6,9 @@ CUdevice cuDevice;
 CUcontext cuContext;
 CUmodule cuModule;
 CUfunction cuBruteCalculateInteractions;
+CUfunction cuUpdateVelocity;
 CUfunction cuAdvanceBodies;
+CUfunction cuSetZeroToAcceleration;
 
 CUdeviceptr moveBodiesToDevice(const std::vector<Body>& bodies) {
     return moveBodiesToDevice(&bodies[0], bodies.size());
@@ -24,6 +26,9 @@ CUdeviceptr moveBodiesToDevice(Body const* bodies, int n) {
         data.insert(
             data.end(),
             bodies[i].acceleration.begin(), bodies[i].acceleration.end());  
+        data.insert(
+            data.end(),
+            bodies[i].velocity.begin(), bodies[i].velocity.end());  
     }
     cuMemcpyHtoD(cu_bodies, &data[0], data_size);
     return cu_bodies;
@@ -33,15 +38,24 @@ std::vector<Body> simulate(CUdeviceptr& bodies, int n, K tick, int dims) {
     int blocks = (n + BRUTE_THREADS_PER_BLOCK - 1) / BRUTE_THREADS_PER_BLOCK;
     void* calculate_args[] = {&bodies, &n, &dims}; 
     CUresult res; 
-    res = cuLaunchKernel(cuBruteCalculateInteractions, blocks, blocks, 1,
-                         BRUTE_THREADS_PER_BLOCK, BRUTE_THREADS_PER_BLOCK, 1,
+    res = cuLaunchKernel(cuSetZeroToAcceleration, blocks, 1, 1,
+                         BRUTE_THREADS_PER_BLOCK, 1, 1,
+                         0, 0, calculate_args, 0);
+    res = cuLaunchKernel(cuBruteCalculateInteractions, blocks, 1, 1,
+                         BRUTE_THREADS_PER_BLOCK, 1, 1,
                          0, 0, calculate_args, 0);
     if (res != CUDA_SUCCESS) {
         throw 0;
     }
     void* advance_args[] = {&bodies, &n, &tick, &dims};
-    res = cuLaunchKernel(cuAdvanceBodies, blocks, blocks, 1,
-                         BRUTE_THREADS_PER_BLOCK, BRUTE_THREADS_PER_BLOCK, 1,
+    res = cuLaunchKernel(cuUpdateVelocity, blocks, 1, 1,
+                         BRUTE_THREADS_PER_BLOCK, 1, 1,
+                         0, 0, advance_args, 0);
+    if (res != CUDA_SUCCESS) {
+        throw 0;
+    }
+    res = cuLaunchKernel(cuAdvanceBodies, blocks, 1, 1,
+                         BRUTE_THREADS_PER_BLOCK, 1, 1,
                          0, 0, advance_args, 0);
     if (res != CUDA_SUCCESS) {
         throw 0;
@@ -81,6 +95,18 @@ bool init() {
 
     res = cuModuleGetFunction(&cuAdvanceBodies,
                               cuModule, "advance_bodies");
+    if (res != CUDA_SUCCESS) {
+        return false;
+    }
+
+    res = cuModuleGetFunction(&cuUpdateVelocity,
+                              cuModule, "update_velocity");
+    if (res != CUDA_SUCCESS) {
+        return false;
+    }
+
+    res = cuModuleGetFunction(&cuSetZeroToAcceleration,
+                              cuModule, "set_zero_to_acceleration");
     if (res != CUDA_SUCCESS) {
         return false;
     }

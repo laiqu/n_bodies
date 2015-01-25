@@ -18,26 +18,33 @@ struct Body {
     K mass;
     std::vector<K> position;
     std::vector<K> acceleration;
+    std::vector<K> velocity;
     Body() {}
     Body(K mass, std::initializer_list<K> position,
-            std::initializer_list<K> acceleration) :
-        mass(mass), position(position), acceleration(acceleration) {}
+         std::initializer_list<K> acceleration,
+         std::initializer_list<K> velocity) :
+        mass(mass), position(position), acceleration(acceleration),
+        velocity(velocity) {}
     Body(K* variables, int dims) {
         mass = variables[0];
-        position = std::vector<K>(variables + 1, variables + 1 + dims);
+        position = std::vector<K>(variables + 1,
+                                  variables + dims + 1);
         acceleration = std::vector<K>(variables + dims + 1,
                                       variables + 2 * dims + 1);
+        velocity = std::vector<K>(variables + 2 * dims + 1,
+                                  variables + 3 * dims + 1);
     }
     int body_byte_size() const {
-        return (1 + position.size() + acceleration.size()) * sizeof(K);
+        return (1 + position.size() + acceleration.size() + velocity.size())
+            * sizeof(K);
     }
 
     static int body_byte_size(int dims) {
-        return (1 + dims * 2) * sizeof(K);
+        return (1 + dims * 3) * sizeof(K);
     }
 
     static int variable_count(int dims) {
-        return 1 + 2 * dims;
+        return 1 + 3 * dims;
     }
 };
 

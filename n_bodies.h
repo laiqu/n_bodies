@@ -8,6 +8,10 @@ namespace n_bodies {
 extern CUdevice cuDevice;
 extern CUcontext cuContext;
 extern CUmodule cuModule;
+extern CUfunction cuBruteCalculateInteractions;
+extern CUfunction cuUpdateVelocity;
+extern CUfunction cuAdvanceBodies;
+extern CUfunction cuSetZeroToAcceleration;
 
 std::vector<Body> simulate(CUdeviceptr& bodies, int n, K tick,
         int dims=DIMENSIONS);
