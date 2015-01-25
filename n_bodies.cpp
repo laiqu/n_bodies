@@ -30,7 +30,7 @@ CUdeviceptr moveBodiesToDevice(Body const* bodies, int n) {
 }
 
 std::vector<Body> simulate(CUdeviceptr& bodies, int n, K tick, int dims) {
-    int blocks = n + BRUTE_THREADS_PER_BLOCK;
+    int blocks = (n + BRUTE_THREADS_PER_BLOCK - 1) / BRUTE_THREADS_PER_BLOCK;
     void* calculate_args[] = {&bodies, &n, &dims}; 
     CUresult res; 
     res = cuLaunchKernel(cuBruteCalculateInteractions, blocks, blocks, 1,
