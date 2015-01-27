@@ -15,7 +15,7 @@ int main() {
     std::cin >> dims;
     std::cout << "Number of bodies?:" << std::endl;
     std::cin >> n;
-    std::cout << "Describe bodies (mass, pos_x, pos_y, vel_x, vel_y):" << std::endl;
+    std::cout << "Describe bodies (mass, radius, pos_x, pos_y, pos_z, acc_x, acc_y, acc_z, vel_x, vel_y, vel_z, assuming 3 dimensions):" << std::endl;
     for (int i = 0; i < n; i++) {
         bodies.push_back(n_bodies::Body::read_from_stream(std::cin, dims));
     }
