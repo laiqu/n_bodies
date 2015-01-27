@@ -69,16 +69,19 @@ bool is_nearby(K* self, K* other, int dims) {
         K axis = POS(other)[i] - POS(self)[i];
         dist += axis * axis;
     }
-    K radiuses = RADI(self) + RADI(other);
-    return dist < radiuses * radiuses;
+    K sq_r = RADI(other) + RADI(self);
+    sq_r *= sq_r;
+    return dist < sq_r;
 }
 
 __global__
 void glue_nearby(K* bodies, int n, int dims) {
     // TODO(laiqu) implement this as proper Kernel.
     for (int i = 0; i < n; i++) {
-        for (int j = i + 1; j < n; j++) {
-            if (is_nearby(BODY(bodies, i), BODY(bodies, j), dims)) {
+        for (int j = 0; j < n; j++) {
+            if (i == j) continue;
+            if (is_nearby(BODY(bodies, i), BODY(bodies, j), dims) &&
+                    MASS(BODY(bodies, i)) >= MASS(BODY(bodies, j))) {
                MASS(BODY(bodies, i)) += MASS(BODY(bodies, j));
                MASS(BODY(bodies, j)) = 0;
                RADI(BODY(bodies, i)) += RADI(BODY(bodies, j));

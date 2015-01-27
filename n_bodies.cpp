@@ -58,7 +58,7 @@ std::vector<Body> simulate(CUdeviceptr& bodies, int n, K tick, int dims) {
     void* glue_args[] = {&bodies, &n, &dims};
     res = cuLaunchKernel(cuGlueNearby, 1, 1, 1,
                          1, 1, 1,
-                        0, 0, glue_args, 0);
+                         0, 0, glue_args, 0);
     if (res != CUDA_SUCCESS) {
         throw 0;
     }
