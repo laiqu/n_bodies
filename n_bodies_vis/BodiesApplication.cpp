@@ -1,4 +1,5 @@
 #include "BodiesApplication.h"
+#include "../types.h"
 #include <cstdio>
 #include <fstream>
 #include <algorithm>
@@ -16,7 +17,8 @@ Application::~Application(void)
 class BodiesFrameListener : public Ogre::FrameListener
 { 
  public:
-	BodiesFrameListener(Ogre::SceneManager* mSceneMgr_) : mSceneMgr(mSceneMgr_), sim_time(0), lastNode(0), current(0) {
+	BodiesFrameListener(Ogre::SceneManager* mSceneMgr_) : mSceneMgr(mSceneMgr_),
+     sim_time(0), lastNode(0), current(0), name_spam(0) {
 		std::ifstream in;
 		in.open("out");
 		int n, dims;
@@ -24,16 +26,11 @@ class BodiesFrameListener : public Ogre::FrameListener
 		while (in.good()) {
 			float time_stamp;
 			in >> time_stamp;
-			positions.push_back(std::make_pair(time_stamp,
-									  std::vector<std::vector<float>>()));		
+			bodies.push_back(std::make_pair(time_stamp,
+									  std::vector<n_bodies::Body>()));		
 			for (int i = 0; i < n; i++) {
-				std::vector<float> input;	
-				for (int j = 0; j < dims + 1; j++) {
-					float t;
-					in >> t;
-					input.push_back(t);
-				}
-				positions.back().second.push_back(input);
+				bodies.back().second.push_back(
+                    n_bodies::Body::read_from_stream(in, dims));
 			}
 		}
 		in.close();		
@@ -43,27 +40,37 @@ class BodiesFrameListener : public Ogre::FrameListener
 		// Create a SceneNode and attach the Entity to it
 		sim_time += evt.timeSinceLastFrame;
 		std::cout << sim_time << " " << current << std::endl;
-		if (sim_time > positions[current].first && current < positions.size()) {
+		if (sim_time > bodies[current].first && current < bodies.size()) {
 			do {
      			 current++;
-			} while (sim_time > positions[current].first && current < positions.size());
+			} while (sim_time > bodies[current].first && current < bodies.size());
 			current--;
-			if (lastNode)
-				lastNode->getCreator()->destroySceneNode(lastNode);
-			lastNode = mSceneMgr->getRootSceneNode()->createChildSceneNode(std::to_string(current++));
-			for (int i = 0; i < positions[current].second.size(); i++) {
-				Ogre::Entity* ogreHead = mSceneMgr->createEntity(std::to_string(10000*current + i), "sphere.mesh");
-				auto headNode = lastNode->createChildSceneNode(std::to_string(10001*current + i));
-				int mass = positions[current].second[i][0];
-				headNode->scale(0.0005f * mass, 0.0005f * mass, 0.0005f * mass);
+            for (auto ent : entities) {
+                delete ent;
+            }
+            for (auto node : nodes) {
+                delete node;
+            }
+            nodes.clear();
+            entities.clear();
+			lastNode = mSceneMgr->getRootSceneNode()->createChildSceneNode(std::to_string(name_spam++));
+            nodes.push_back(lastNode);
+			for (const auto& body : bodies[current].second) {
+				Ogre::Entity* e_body = mSceneMgr->createEntity(std::to_string(name_spam++), "sphere.mesh");
+                entities.push_back(e_body);
+				Ogre::SceneNode* n_body = lastNode->createChildSceneNode(std::to_string(name_spam++));
+                nodes.push_back(n_body);
+                // Current sphere has 100 radius, so 0.01f makes it radius 1
+                float s_r = 0.01f;
+				n_body->scale(s_r * body.radius, s_r * body.radius, s_r * body.radius);
 				// TODO(laiqu) check if we could simply use Ogre::Vector3. To 
 				// tired at the moment.
 				std::vector<float> tmp({0, 0, 0});
-				for (int j = 1; j < positions[current].second[i].size(); j++) {
-					tmp[j - 1] = positions[current].second[i][j];
+				for (int j = 1; j < body.position.size(); j++) {
+					tmp[j - 1] = body.position[j];
 				}	
-				headNode->translate(tmp[0], tmp[1], tmp[2]);
-				headNode->attachObject(ogreHead);
+				n_body->translate(tmp[0], tmp[1], tmp[2]);
+				n_body->attachObject(e_body);
 			}
 		}
 		return true;
@@ -71,9 +78,12 @@ class BodiesFrameListener : public Ogre::FrameListener
  protected:
 	Ogre::SceneManager* mSceneMgr;
  	Ogre::SceneNode* lastNode;
-    std::vector<std::pair<float, std::vector<std::vector<float>>>> positions;
+    std::vector<std::pair<float, std::vector<n_bodies::Body>>> bodies;
+    std::vector<Ogre::Entity*> entities;
+    std::vector<Ogre::SceneNode*> nodes;
     float sim_time;
  	int current;
+    int name_spam;
 };
 void Application::createScene(void)
 {
