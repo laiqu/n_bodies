@@ -3,5 +3,7 @@
 #define EPS2 0.000001f
 // not in namespace so it's accessible from cuda
 typedef float K;
-extern const int DIMENSIONS;
-extern const int BRUTE_THREADS_PER_BLOCK;
+const int DIMENSIONS = 3;
+const int BRUTE_THREADS_PER_BLOCK = 32;
+const int BODY_SINGLE_VARS = 2;
+const int BODY_REPEATED_VARS = 3;

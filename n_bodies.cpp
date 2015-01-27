@@ -1,4 +1,5 @@
 #include "n_bodies.h"
+#include "config.h"
 #include <cassert>
 
 namespace n_bodies {

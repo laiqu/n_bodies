@@ -1,5 +1,6 @@
 #include "n_bodies.h"
 #include "types.h"
+#include "config.h"
 #include <vector>
 #include <iostream>
 

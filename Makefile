@@ -24,7 +24,7 @@ CXXFLAGS += $(COMMONFLAGS)
 CFLAGS += $(COMMONFLAGS)
 
 CUDA_OBJS = n_bodies.ptx 
-OBJS = main.cpp.o n_bodies.cpp.o types.cpp.o config.cpp.o
+OBJS = main.cpp.o n_bodies.cpp.o types.cpp.o
 TARGET = solution.x
 LINKLINE = $(LINK) -o $(TARGET) $(OBJS) $(LIB_CUDA)
 

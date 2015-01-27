@@ -1,5 +1,4 @@
 #include "config.h"
-#include "types.h"
 
 #include <cstdio>
 #define BODY_OFFSET (BODY_SINGLE_VARS + dims * BODY_REPEATED_VARS)

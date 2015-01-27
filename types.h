@@ -6,8 +6,6 @@
 #include <initializer_list>
 
 // outside of namespace because of CUDA
-const int BODY_SINGLE_VARS = 2;
-const int BODY_REPEATED_VARS = 3;
 namespace n_bodies {
 
 // Describes bodies.
