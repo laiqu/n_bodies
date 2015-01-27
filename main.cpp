@@ -42,7 +42,7 @@ int main() {
     }
 #else
     for (K i = 0; i < sim_length; i += tick) {
-        auto result = n_bodies::simulate(cu_bodies, n, tick);
+        auto result = n_bodies::simulate(cu_bodies, n, tick, dims);
         std::cout << i << std::endl;
         for (const auto& body : result) {
             for (const auto& var : body.to_vector()) {
