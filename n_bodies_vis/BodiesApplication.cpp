@@ -66,8 +66,8 @@ class BodiesFrameListener : public Ogre::FrameListener
 				// TODO(laiqu) check if we could simply use Ogre::Vector3. To 
 				// tired at the moment.
 				std::vector<float> tmp({0, 0, 0});
-				for (int j = 1; j < body.position.size(); j++) {
-					tmp[j - 1] = body.position[j];
+				for (int j = 0; j < body.position.size(); j++) {
+					tmp[j] = body.position[j];
 				}	
 				n_body->translate(tmp[0], tmp[1], tmp[2]);
 				n_body->attachObject(e_body);
