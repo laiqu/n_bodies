@@ -12,6 +12,7 @@ extern CUfunction cuBruteCalculateInteractions;
 extern CUfunction cuUpdateVelocity;
 extern CUfunction cuAdvanceBodies;
 extern CUfunction cuSetZeroToAcceleration;
+extern CUfunction cuGlueNearby;
 
 std::vector<Body> simulate(CUdeviceptr& bodies, int n, K tick,
         int dims=DIMENSIONS);

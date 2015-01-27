@@ -9,6 +9,7 @@ CUfunction cuBruteCalculateInteractions;
 CUfunction cuUpdateVelocity;
 CUfunction cuAdvanceBodies;
 CUfunction cuSetZeroToAcceleration;
+CUfunction cuGlueNearby;
 
 CUdeviceptr moveBodiesToDevice(const std::vector<Body>& bodies) {
     return moveBodiesToDevice(&bodies[0], bodies.size());
@@ -20,15 +21,8 @@ CUdeviceptr moveBodiesToDevice(Body const* bodies, int n) {
     cuMemAlloc(&cu_bodies, data_size);
     std::vector<K> data;
     for (int i = 0; i < n; ++i) {
-        data.push_back(bodies[i].mass);
-        data.insert(
-            data.end(), bodies[i].position.begin(), bodies[i].position.end());  
-        data.insert(
-            data.end(),
-            bodies[i].acceleration.begin(), bodies[i].acceleration.end());  
-        data.insert(
-            data.end(),
-            bodies[i].velocity.begin(), bodies[i].velocity.end());  
+        std::vector<K> body_vec = bodies[i].to_vector();
+        data.insert(data.end(), body_vec.begin(), body_vec.end());
     }
     cuMemcpyHtoD(cu_bodies, &data[0], data_size);
     return cu_bodies;
@@ -60,6 +54,15 @@ std::vector<Body> simulate(CUdeviceptr& bodies, int n, K tick, int dims) {
     if (res != CUDA_SUCCESS) {
         throw 0;
     }
+
+    void* glue_args[] = {&bodies, &n, &dims};
+    res = cuLaunchKernel(cuGlueNearby, 1, 1, 1,
+                         1, 1, 1,
+                        0, 0, glue_args, 0);
+    if (res != CUDA_SUCCESS) {
+        throw 0;
+    }
+    
     K data[n * Body::body_byte_size(dims)];
     cuMemcpyDtoH(data, bodies, n * Body::body_byte_size(dims));
     std::vector<Body> result(n);
@@ -107,6 +110,12 @@ bool init() {
 
     res = cuModuleGetFunction(&cuSetZeroToAcceleration,
                               cuModule, "set_zero_to_acceleration");
+    if (res != CUDA_SUCCESS) {
+        return false;
+    }
+
+    res = cuModuleGetFunction(&cuGlueNearby,
+                              cuModule, "glue_nearby");
     if (res != CUDA_SUCCESS) {
         return false;
     }

@@ -1,12 +1,14 @@
 #include "config.h"
+#include "types.h"
 
 #include <cstdio>
-#define BODY_OFFSET (1 + dims * 3)
+#define BODY_OFFSET (BODY_SINGLE_VARS + dims * BODY_REPEATED_VARS)
 #define BODY(ARR, X) (ARR + (X * BODY_OFFSET))
 #define MASS(BODY) (*(BODY + 0))
-#define POS(BODY) (BODY + 1)
-#define ACC(BODY) (BODY + dims + 1)
-#define VEL(BODY) (BODY + 2 * dims + 1)
+#define RADI(BODY) (*(BODY + 1))
+#define POS(BODY) (BODY + BODY_SINGLE_VARS)
+#define ACC(BODY) (BODY + dims + BODY_SINGLE_VARS)
+#define VEL(BODY) (BODY + 2 * dims + BODY_SINGLE_VARS)
 // macro usage - MASS(BODY(bodies, i)) or POS(BODY(bodies, i))[1] (this gives y)
 extern "C" {
 __device__
@@ -57,6 +59,32 @@ void set_zero_to_acceleration(K* bodies, int n, int dims) {
     if (x >= n) return;
     for (int i = 0; i < dims; ++i) {
         ACC(BODY(bodies, x))[i] = 0;
+    }
+}
+
+__device__
+bool is_nearby(K* self, K* other, int dims) {
+    K dist = 0;
+    for (int i = 0; i < dims; ++i) {
+        K axis = POS(other)[i] - POS(self)[i];
+        dist += axis * axis;
+    }
+    K radiuses = RADI(self) + RADI(other);
+    return dist < radiuses * radiuses;
+}
+
+__global__
+void glue_nearby(K* bodies, int n, int dims) {
+    // TODO(laiqu) implement this as proper Kernel.
+    for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+            if (is_nearby(BODY(bodies, i), BODY(bodies, j), dims)) {
+               MASS(BODY(bodies, i)) += MASS(BODY(bodies, j));
+               MASS(BODY(bodies, j)) = 0;
+               RADI(BODY(bodies, i)) += RADI(BODY(bodies, j));
+               RADI(BODY(bodies, j)) = 0;
+            }
+        }
     }
 }
 }

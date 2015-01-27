@@ -3,6 +3,7 @@
 namespace n_bodies {
 std::ostream& operator << (std::ostream& out, const Body& body) {
     out << "mass: " << body.mass << ", ";
+    out << "radius: " << body.radius << ", ";
     out << "position ";
     for (int i = 0; i < body.position.size(); i++) {
         out << char('x' + i) << ": " << body.position[i] << " "; 

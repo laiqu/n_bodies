@@ -16,16 +16,7 @@ int main() {
     std::cin >> n;
     std::cout << "Describe bodies (mass, pos_x, pos_y, vel_x, vel_y):" << std::endl;
     for (int i = 0; i < n; i++) {
-        K input[n_bodies::Body::variable_count(dims)];
-        for (int j = 0; j < n_bodies::Body::variable_count(dims); ++j) {
-            if (j >= dims + 1 && j < 2 * dims + 1) {
-                input[j] = 0;
-            } else {
-                std::cin >> input[j];
-            }
-        }
-
-        bodies.push_back(n_bodies::Body(input, dims));
+        bodies.push_back(n_bodies::Body::read_from_stream(std::cin, dims));
     }
     K sim_length, tick;
     std::cout << "Simulation length (in seconds):" << std::endl;
@@ -34,7 +25,10 @@ int main() {
     std::cin >> tick;
     std::cout << "Starting with: " << std::endl;
     CUdeviceptr cu_bodies = moveBodiesToDevice(bodies);
-#if 1
+    // second one only prints raw arrays so after doing 
+    // '1d;2d;3d;4d;5d;6s/.*/3 200/;$ d' on output 
+    // this output easy to parse
+#if 0 
     for (const auto& body : bodies) {
         std::cout << std::fixed << body << std::endl; 
     }
@@ -50,9 +44,8 @@ int main() {
         auto result = n_bodies::simulate(cu_bodies, n, tick);
         std::cout << i << std::endl;
         for (const auto& body : result) {
-            std::cout << std::fixed << body.mass << " ";
-            for (int j = 0; j < dims; ++j) {
-                std::cout << std::fixed << body.position[j] << " ";
+            for (const auto& var : body.to_vector()) {
+                std::cout << std::fixed << var << " ";
             }
             std::cout << std::endl;
         }

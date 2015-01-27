@@ -1,6 +1,7 @@
 #pragma once
+// cannot live in config.cpp because nvcc won't find it while compiling kernel. 
+#define EPS2 0.000001f
 // not in namespace so it's accessible from cuda
 typedef float K;
-const int DIMENSIONS = 3;
-const K EPS2 = 0.0000000000001;
-const int BRUTE_THREADS_PER_BLOCK = 32;
+extern const int DIMENSIONS;
+extern const int BRUTE_THREADS_PER_BLOCK;
