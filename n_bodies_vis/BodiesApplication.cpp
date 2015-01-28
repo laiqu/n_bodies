@@ -25,8 +25,8 @@ class BodiesFrameListener : public Ogre::FrameListener
 	BodiesFrameListener(Ogre::SceneManager* mSceneMgr_) : mSceneMgr(mSceneMgr_),
      sim_time(0), lastNode(0), current(0), name_spam(0) {
 		std::ifstream in;
+        n_bodies::init();
 		in.open("out");
-		int n, dims;
 		in >> dims >> n;
         while (in.good()) {
             float time_stamp;
@@ -101,6 +101,7 @@ class BodiesFrameListener : public Ogre::FrameListener
  	int current;
     int name_spam;
     int n;
+    int dims;
     CUdeviceptr dev_bodies;
 };
 void Application::createScene(void)
