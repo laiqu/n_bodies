@@ -123,11 +123,19 @@ std::vector<Body> simulate(CUdeviceptr& bodies, int& n, K tick, int dims) {
     std::vector<Body> result;
     for (int i = 0, j = 0; i < n; i++, j += Body::variable_count(dims)) {
         Body body(data + j, dims);
-        if (body.mass >= EPS2) {
-           result.push_back(body); 
-        }   
+        if (body.mass <= EPS2) {
+            for (int k = 0; k < Body::variable_count(dims); k++) {
+                std::swap(*(data + j + k),
+                          *(data + (n - 1) * Body::variable_count(dims) + k));
+            }
+            i--;
+            j -= Body::variable_count(dims);
+            n--;
+        } else {   
+            result.push_back(body); 
+        }
     }
-    n = result.size();
+    cuMemcpyHtoD(bodies, data, n * Body::body_byte_size(dims));
     return result;
 }
 
