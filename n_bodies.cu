@@ -1,6 +1,7 @@
 #include "config.h"
 
 #include <cstdio>
+#include <cmath>
 #define BODY_OFFSET (BODY_SINGLE_VARS + dims * BODY_REPEATED_VARS)
 #define BODY(ARR, X) (ARR + (X * BODY_OFFSET))
 #define MASS(BODY) (*(BODY + 0))
@@ -81,11 +82,13 @@ void glue_nearby(K* bodies, int n, int dims) {
             if (i == j) continue;
             if (is_nearby(BODY(bodies, i), BODY(bodies, j), dims) &&
                     MASS(BODY(bodies, i)) >= MASS(BODY(bodies, j))) {
-               for (int k=0; k<dims; ++k)
+               for (int k=0; k<dims; ++k) {
                    POS(BODY(bodies, i))[k] = (POS(BODY(bodies, i))[k]*MASS(BODY(bodies, i)) + POS(BODY(bodies, j))[k]*MASS(BODY(bodies, j))) / (MASS(BODY(bodies, i)) + MASS(BODY(bodies, j)));
+                   VEL(BODY(bodies, i))[k] = (VEL(BODY(bodies, i))[k]*MASS(BODY(bodies, i)) + VEL(BODY(bodies, j))[k]*MASS(BODY(bodies, j))) / (MASS(BODY(bodies, i)) + MASS(BODY(bodies, j)));
+               }
                MASS(BODY(bodies, i)) += MASS(BODY(bodies, j));
                MASS(BODY(bodies, j)) = 0;
-               RADI(BODY(bodies, i)) += RADI(BODY(bodies, j));
+               RADI(BODY(bodies, i)) = powf(powf(RADI(BODY(bodies, i)), dims) + powf(RADI(BODY(bodies, j)), dims), 1.0/dims);
                RADI(BODY(bodies, j)) = 0;
             }
         }
