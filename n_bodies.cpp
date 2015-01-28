@@ -71,7 +71,7 @@ std::vector<Body> simulate(CUdeviceptr& bodies, int n, K tick, int dims) {
         res = cuLaunchKernel(cuGlueNearbyParallel,
                           BLOCKS_X, BLOCKS_Y, 1,
                           THREADS_X, THREADS_Y, 1,
-                          0, 0, args, 0));
+                          0, 0, glue_parallel_args, 0);
 
         if (res != CUDA_SUCCESS) {
             throw 0;
