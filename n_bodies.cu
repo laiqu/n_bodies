@@ -1,6 +1,7 @@
 #include "config.h"
 
 #include <cstdio>
+#include <cmath>
 #define BODY_OFFSET (BODY_SINGLE_VARS + dims * BODY_REPEATED_VARS)
 #define BODY(ARR, X) (ARR + (X * BODY_OFFSET))
 #define MASS(BODY) (*(BODY + 0))
@@ -87,7 +88,7 @@ void glue_nearby(K* bodies, int n, int dims) {
                }
                MASS(BODY(bodies, i)) += MASS(BODY(bodies, j));
                MASS(BODY(bodies, j)) = 0;
-               RADI(BODY(bodies, i)) += RADI(BODY(bodies, j));
+               RADI(BODY(bodies, i)) = powf(powf(RADI(BODY(bodies, i)), dims) + powf(RADI(BODY(bodies, j)), dims), 1.0/dims);
                RADI(BODY(bodies, j)) = 0;
             }
         }
