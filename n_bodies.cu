@@ -75,14 +75,6 @@ bool is_nearby(K* self, K* other, int dims) {
 }
 
 __device__
-void glue_two(K* bodies, int i, int j, int dims) {
-    if (is_nearby(BODY(bodies, i), BODY(bodies, j), dims) &&
-            MASS(BODY(bodies, i)) >= MASS(BODY(bodies, j))) {
-        merge(bodies, i, j, dims);
-    }
-}
-
-__device__
 void merge(K* bodies, int i, int j, int dims) {
    for (int k=0; k<dims; ++k) {
        POS(BODY(bodies, i))[k] = (POS(BODY(bodies, i))[k]*MASS(BODY(bodies, i)) + POS(BODY(bodies, j))[k]*MASS(BODY(bodies, j))) / (MASS(BODY(bodies, i)) + MASS(BODY(bodies, j)));
@@ -92,6 +84,14 @@ void merge(K* bodies, int i, int j, int dims) {
    MASS(BODY(bodies, j)) = 0;
    RADI(BODY(bodies, i)) = powf(powf(RADI(BODY(bodies, i)), dims) + powf(RADI(BODY(bodies, j)), dims), 1.0/dims);
    RADI(BODY(bodies, j)) = 0;
+}
+
+__device__
+void glue_two(K* bodies, int i, int j, int dims) {
+    if (is_nearby(BODY(bodies, i), BODY(bodies, j), dims) &&
+            MASS(BODY(bodies, i)) >= MASS(BODY(bodies, j))) {
+        merge(bodies, i, j, dims);
+    }
 }
 
 __global__
