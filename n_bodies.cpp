@@ -66,6 +66,17 @@ std::vector<Body> simulate(CUdeviceptr& bodies, int n, K tick, int dims) {
     // }
 
     void* glue_parallel_args[] = {&bodies, &n, &dims, NULL};
+    // TODO: what if n > 1024 * 256 * 256
+    int temp = n / 1024 + 1;
+    if (temp > 1) {
+        if (temp > 256) {
+            BLOCKS_X = 256;
+            BLOCKS_Y = temp / 256 + 1;
+        } else {
+            BLOCKS_X = temp;
+            BLOCKS_Y = 1;
+        }
+    }
     for (int i=1; i<n; i++) {
         glue_parallel_args[3] = &i;
         res = cuLaunchKernel(cuGlueNearbyParallel,

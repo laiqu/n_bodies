@@ -9,5 +9,5 @@ const int BODY_SINGLE_VARS = 2;
 const int BODY_REPEATED_VARS = 3;
 const int THREADS_X = 32;
 const int THREADS_Y = 32;
-const int BLOCKS_X = 256;
-const int BLOCKS_Y = 256;
+int BLOCKS_X = 256;
+int BLOCKS_Y = 256;
