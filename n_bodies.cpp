@@ -35,7 +35,7 @@ CUdeviceptr moveBodiesToDevice(Body const* bodies, int n) {
     return cu_bodies;
 }
 
-std::vector<Body> simulate(CUdeviceptr& bodies, int n, K tick, int dims) {
+std::vector<Body> simulate(CUdeviceptr& bodies, int& n, K tick, int dims) {
     int blocks = (n + BRUTE_THREADS_PER_BLOCK - 1) / BRUTE_THREADS_PER_BLOCK;
     void* calculate_args[] = {&bodies, &n, &dims}; 
     CUresult res; 
@@ -120,10 +120,14 @@ std::vector<Body> simulate(CUdeviceptr& bodies, int n, K tick, int dims) {
     */
     K data[n * Body::body_byte_size(dims)];
     cuMemcpyDtoH(data, bodies, n * Body::body_byte_size(dims));
-    std::vector<Body> result(n);
+    std::vector<Body> result;
     for (int i = 0, j = 0; i < n; i++, j += Body::variable_count(dims)) {
-        result[i] = Body(data + j, dims);
+        Body body(data + j, dims);
+        if (body.mass >= EPS2) {
+           result.push_back(body); 
+        }   
     }
+    n = result.size();
     return result;
 }
 
