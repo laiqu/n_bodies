@@ -1,5 +1,6 @@
 #include "BodiesApplication.h"
 #include "../types.h"
+#include "../n_bodies.h"
 #include <cstdio>
 #include <fstream>
 #include <algorithm>
@@ -12,6 +13,10 @@ Application::Application(void)
 Application::~Application(void)
 {
 }
+
+// TODO(laiqu) change this brutal flag to something normal.
+bool BRUTAL_ONLINE_SIMULATE_FLAG = true; // indicates if we should playback
+                                         // data in a file or simulate it online
  
 //-------------------------------------------------------------------------------------
 class BodiesFrameListener : public Ogre::FrameListener
@@ -23,16 +28,21 @@ class BodiesFrameListener : public Ogre::FrameListener
 		in.open("out");
 		int n, dims;
 		in >> dims >> n;
-		while (in.good()) {
-			float time_stamp;
-			in >> time_stamp;
-			bodies.push_back(std::make_pair(time_stamp,
-									  std::vector<n_bodies::Body>()));		
-			for (int i = 0; i < n; i++) {
-				bodies.back().second.push_back(
+        while (in.good()) {
+            float time_stamp;
+            in >> time_stamp;
+            bodies.push_back(std::make_pair(time_stamp,
+                                      std::vector<n_bodies::Body>()));		
+            for (int i = 0; i < n; i++) {
+                bodies.back().second.push_back(
                     n_bodies::Body::read_from_stream(in, dims));
-			}
-		}
+            }
+            if (BRUTAL_ONLINE_SIMULATE_FLAG) {
+                dev_bodies = n_bodies::moveBodiesToDevice(bodies.back().second);
+                break;
+            }
+        }
+
 		in.close();		
 	}
 	bool frameRenderingQueued(const Ogre::FrameEvent& evt) {
@@ -40,39 +50,45 @@ class BodiesFrameListener : public Ogre::FrameListener
 		// Create a SceneNode and attach the Entity to it
 		sim_time += evt.timeSinceLastFrame;
 		std::cout << sim_time << " " << current << std::endl;
-		if (sim_time > bodies[current].first && current < bodies.size()) {
-			do {
-     			 current++;
-			} while (sim_time > bodies[current].first && current < bodies.size());
-			current--;
-            for (auto ent : entities) {
-                delete ent;
+        std::vector<n_bodies::Body> cur_bodies;
+        if (BRUTAL_ONLINE_SIMULATE_FLAG) {
+            cur_bodies = n_bodies::simulate(dev_bodies, n, evt.timeSinceLastFrame); 
+        } else {
+            if (sim_time > bodies[current].first && current < bodies.size()) {
+                do {
+                     current++;
+                } while (sim_time > bodies[current].first && current < bodies.size());
+                current--;
+                cur_bodies = bodies[current].second;
             }
-            for (auto node : nodes) {
-                delete node;
-            }
-            nodes.clear();
-            entities.clear();
-			lastNode = mSceneMgr->getRootSceneNode()->createChildSceneNode(std::to_string(name_spam++));
-            nodes.push_back(lastNode);
-			for (const auto& body : bodies[current].second) {
-				Ogre::Entity* e_body = mSceneMgr->createEntity(std::to_string(name_spam++), "sphere.mesh");
-                entities.push_back(e_body);
-				Ogre::SceneNode* n_body = lastNode->createChildSceneNode(std::to_string(name_spam++));
-                nodes.push_back(n_body);
-                // Current sphere has 100 radius, so 0.01f makes it radius 1
-                float s_r = 0.01f;
-				n_body->scale(s_r * body.radius, s_r * body.radius, s_r * body.radius);
-				// TODO(laiqu) check if we could simply use Ogre::Vector3. To 
-				// tired at the moment.
-				std::vector<float> tmp({0, 0, 0});
-				for (int j = 0; j < body.position.size(); j++) {
-					tmp[j] = body.position[j];
-				}	
-				n_body->translate(tmp[0], tmp[1], tmp[2]);
-				n_body->attachObject(e_body);
-			}
-		}
+        }
+        for (auto ent : entities) {
+            delete ent;
+        }
+        for (auto node : nodes) {
+            delete node;
+        }
+        nodes.clear();
+        entities.clear();
+        lastNode = mSceneMgr->getRootSceneNode()->createChildSceneNode(std::to_string(name_spam++));
+        nodes.push_back(lastNode);
+        for (const auto& body : bodies[current].second) {
+            Ogre::Entity* e_body = mSceneMgr->createEntity(std::to_string(name_spam++), "sphere.mesh");
+            entities.push_back(e_body);
+            Ogre::SceneNode* n_body = lastNode->createChildSceneNode(std::to_string(name_spam++));
+            nodes.push_back(n_body);
+            // Current sphere has 100 radius, so 0.01f makes it radius 1
+            float s_r = 0.01f;
+            n_body->scale(s_r * body.radius, s_r * body.radius, s_r * body.radius);
+            // TODO(laiqu) check if we could simply use Ogre::Vector3. To 
+            // tired at the moment.
+            std::vector<float> tmp({0, 0, 0});
+            for (int j = 0; j < body.position.size(); j++) {
+                tmp[j] = body.position[j];
+            }	
+            n_body->translate(tmp[0], tmp[1], tmp[2]);
+            n_body->attachObject(e_body);
+        }
 		return true;
 	}
  protected:
@@ -84,6 +100,8 @@ class BodiesFrameListener : public Ogre::FrameListener
     float sim_time;
  	int current;
     int name_spam;
+    int n;
+    CUdeviceptr dev_bodies;
 };
 void Application::createScene(void)
 {
@@ -114,6 +132,8 @@ extern "C" {
     int main(int argc, char *argv[])
 #endif
     {
+        if (argc > 1)
+            BRUTAL_ONLINE_SIMULATE_FLAG = false;
         // Create application object
         Application app;
  
