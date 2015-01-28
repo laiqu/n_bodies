@@ -74,24 +74,46 @@ bool is_nearby(K* self, K* other, int dims) {
     return dist < sq_r;
 }
 
+__device__
+void glue_two(K* bodies, int i, int j, int dims) {
+    if (is_nearby(BODY(bodies, i), BODY(bodies, j), dims) &&
+            MASS(BODY(bodies, i)) >= MASS(BODY(bodies, j))) {
+       for (int k=0; k<dims; ++k) {
+           POS(BODY(bodies, i))[k] = (POS(BODY(bodies, i))[k]*MASS(BODY(bodies, i)) + POS(BODY(bodies, j))[k]*MASS(BODY(bodies, j))) / (MASS(BODY(bodies, i)) + MASS(BODY(bodies, j)));
+           VEL(BODY(bodies, i))[k] = (VEL(BODY(bodies, i))[k]*MASS(BODY(bodies, i)) + VEL(BODY(bodies, j))[k]*MASS(BODY(bodies, j))) / (MASS(BODY(bodies, i)) + MASS(BODY(bodies, j)));
+       }
+       MASS(BODY(bodies, i)) += MASS(BODY(bodies, j));
+       MASS(BODY(bodies, j)) = 0;
+       RADI(BODY(bodies, i)) = powf(powf(RADI(BODY(bodies, i)), dims) + powf(RADI(BODY(bodies, j)), dims), 1.0/dims);
+       RADI(BODY(bodies, j)) = 0;
+    }
+}
+
 __global__
 void glue_nearby(K* bodies, int n, int dims) {
     // TODO(laiqu) implement this as proper Kernel.
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
             if (i == j) continue;
-            if (is_nearby(BODY(bodies, i), BODY(bodies, j), dims) &&
-                    MASS(BODY(bodies, i)) >= MASS(BODY(bodies, j))) {
-               for (int k=0; k<dims; ++k) {
-                   POS(BODY(bodies, i))[k] = (POS(BODY(bodies, i))[k]*MASS(BODY(bodies, i)) + POS(BODY(bodies, j))[k]*MASS(BODY(bodies, j))) / (MASS(BODY(bodies, i)) + MASS(BODY(bodies, j)));
-                   VEL(BODY(bodies, i))[k] = (VEL(BODY(bodies, i))[k]*MASS(BODY(bodies, i)) + VEL(BODY(bodies, j))[k]*MASS(BODY(bodies, j))) / (MASS(BODY(bodies, i)) + MASS(BODY(bodies, j)));
-               }
-               MASS(BODY(bodies, i)) += MASS(BODY(bodies, j));
-               MASS(BODY(bodies, j)) = 0;
-               RADI(BODY(bodies, i)) = powf(powf(RADI(BODY(bodies, i)), dims) + powf(RADI(BODY(bodies, j)), dims), 1.0/dims);
-               RADI(BODY(bodies, j)) = 0;
-            }
+            glue_two(bodies, i, j, dims);
         }
     }
+}
+
+__global__
+void glue_nearby_parallel(K* bodies, int n, int dims, int d) {
+    int x = THREADS_X * THREADS_Y * (BLOCKS_Y * blockIdx.x + blockIdx.y) + THREADS_Y * threadIdx.x + threadIdx.y;
+
+    if (x % (2 * d) >= d || x + d >= n) return;
+
+    int i = x;
+    int j = x + d;
+    glue_two(bodies, i, j, dims);
+    __syncthreads();
+
+    i = x + d;
+    j = i + d;
+    if (j >= n) return;
+    glue_two(bodies, i, j, dims);
 }
 }

@@ -11,6 +11,7 @@ CUfunction cuUpdateVelocity;
 CUfunction cuAdvanceBodies;
 CUfunction cuSetZeroToAcceleration;
 CUfunction cuGlueNearby;
+CUfunction cuGlueNearbyParallel;
 
 CUdeviceptr moveBodiesToDevice(const std::vector<Body>& bodies) {
     return moveBodiesToDevice(&bodies[0], bodies.size());
@@ -56,12 +57,25 @@ std::vector<Body> simulate(CUdeviceptr& bodies, int n, K tick, int dims) {
         throw 0;
     }
 
-    void* glue_args[] = {&bodies, &n, &dims};
-    res = cuLaunchKernel(cuGlueNearby, 1, 1, 1,
-                         1, 1, 1,
-                         0, 0, glue_args, 0);
-    if (res != CUDA_SUCCESS) {
-        throw 0;
+    // void* glue_args[] = {&bodies, &n, &dims};
+    // res = cuLaunchKernel(cuGlueNearby, 1, 1, 1,
+    //                      1, 1, 1,
+    //                      0, 0, glue_args, 0);
+    // if (res != CUDA_SUCCESS) {
+    //     throw 0;
+    // }
+
+    void* glue_parallel_args[] = {&bodies, &n, &dims, NULL};
+    for (int i=1; i<n; i++) {
+        glue_parallel_args[3] = &i;
+        res = cuLaunchKernel(cuGlueNearbyParallel,
+                          BLOCKS_X, BLOCKS_Y, 1,
+                          THREADS_X, THREADS_Y, 1,
+                          0, 0, args, 0));
+
+        if (res != CUDA_SUCCESS) {
+            throw 0;
+        }
     }
     
     K data[n * Body::body_byte_size(dims)];
@@ -117,6 +131,12 @@ bool init() {
 
     res = cuModuleGetFunction(&cuGlueNearby,
                               cuModule, "glue_nearby");
+    if (res != CUDA_SUCCESS) {
+        return false;
+    }
+
+    res = cuModuleGetFunction(&cuGlueNearbyParallel,
+                              cuModule, "glue_nearby_parallel");
     if (res != CUDA_SUCCESS) {
         return false;
     }
