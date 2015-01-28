@@ -67,7 +67,7 @@ std::vector<Body> simulate(CUdeviceptr& bodies, int n, K tick, int dims) {
 
     // TODO: what if n > 1024 * 256 * 256
     int temp = n / 1024 + 1;
-    int BLOCKS_X, BLOCKS_Y;
+    int BLOCKS_X = 1, BLOCKS_Y = 1;
     if (temp > 1) {
         if (temp > 256) {
             BLOCKS_X = 256;
