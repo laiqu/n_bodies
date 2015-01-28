@@ -72,7 +72,7 @@ class BodiesFrameListener : public Ogre::FrameListener
         entities.clear();
         lastNode = mSceneMgr->getRootSceneNode()->createChildSceneNode(std::to_string(name_spam++));
         nodes.push_back(lastNode);
-        for (const auto& body : bodies[current].second) {
+        for (const auto& body : cur_bodies) {
             Ogre::Entity* e_body = mSceneMgr->createEntity(std::to_string(name_spam++), "sphere.mesh");
             entities.push_back(e_body);
             Ogre::SceneNode* n_body = lastNode->createChildSceneNode(std::to_string(name_spam++));
