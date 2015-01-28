@@ -12,6 +12,10 @@ CUfunction cuAdvanceBodies;
 CUfunction cuSetZeroToAcceleration;
 CUfunction cuGlueNearby;
 CUfunction cuGlueNearbyParallel;
+CUfunction cuFindMergeCandidates;
+CUfunction cuMergeUsingCandidates;
+
+CUdeviceptr candidates = 0;
 
 CUdeviceptr moveBodiesToDevice(const std::vector<Body>& bodies) {
     return moveBodiesToDevice(&bodies[0], bodies.size());
@@ -21,6 +25,7 @@ CUdeviceptr moveBodiesToDevice(Body const* bodies, int n) {
     CUdeviceptr cu_bodies;
     int data_size = n * bodies[0].body_byte_size();
     cuMemAlloc(&cu_bodies, data_size);
+
     std::vector<K> data;
     for (int i = 0; i < n; ++i) {
         std::vector<K> body_vec = bodies[i].to_vector();
@@ -57,6 +62,28 @@ std::vector<Body> simulate(CUdeviceptr& bodies, int n, K tick, int dims) {
         throw 0;
     }
 
+    if (!candidates) {
+        res = cuMemAlloc(&candidates, n*sizeof(int));
+        if (res != CUDA_SUCCESS) {
+            throw 0;
+        }
+    }
+
+    void *merge_args[] = {&bodies, &n, &dims, &candidates};
+
+    res = cuLaunchKernel(cuFindMergeCandidates, blocks, 1, 1,
+                         BRUTE_THREADS_PER_BLOCK, 1, 1,
+                         0, 0, merge_args, 0);
+    if (res != CUDA_SUCCESS) {
+        throw 0;
+    }
+    res = cuLaunchKernel(cuMergeUsingCandidates, blocks, 1, 1,
+                         BRUTE_THREADS_PER_BLOCK, 1, 1,
+                         0, 0, merge_args, 0);
+    if (res != CUDA_SUCCESS) {
+        throw 0;
+    }
+
     // void* glue_args[] = {&bodies, &n, &dims};
     // res = cuLaunchKernel(cuGlueNearby, 1, 1, 1,
     //                      1, 1, 1,
@@ -66,6 +93,7 @@ std::vector<Body> simulate(CUdeviceptr& bodies, int n, K tick, int dims) {
     // }
 
     // TODO: what if n > 1024 * 256 * 256
+    /*
     int temp = n / 1024 + 1;
     int BLOCKS_X = 1, BLOCKS_Y = 1;
     if (temp > 1) {
@@ -89,7 +117,7 @@ std::vector<Body> simulate(CUdeviceptr& bodies, int n, K tick, int dims) {
             throw 0;
         }
     }
-    
+    */
     K data[n * Body::body_byte_size(dims)];
     cuMemcpyDtoH(data, bodies, n * Body::body_byte_size(dims));
     std::vector<Body> result(n);
@@ -152,7 +180,19 @@ bool init() {
     if (res != CUDA_SUCCESS) {
         return false;
     }
-                              
+
+    res = cuModuleGetFunction(&cuFindMergeCandidates,
+                              cuModule, "find_merge_candidates");
+    if (res != CUDA_SUCCESS) {
+        return false;
+    }
+
+    res = cuModuleGetFunction(&cuMergeUsingCandidates,
+                              cuModule, "merge_using_candidates");
+    if (res != CUDA_SUCCESS) {
+        return false;
+    }
+
     return true;
 }
 } // namespace n_bodies

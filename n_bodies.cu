@@ -78,20 +78,53 @@ __device__
 void glue_two(K* bodies, int i, int j, int dims) {
     if (is_nearby(BODY(bodies, i), BODY(bodies, j), dims) &&
             MASS(BODY(bodies, i)) >= MASS(BODY(bodies, j))) {
-       for (int k=0; k<dims; ++k) {
-           POS(BODY(bodies, i))[k] = (POS(BODY(bodies, i))[k]*MASS(BODY(bodies, i)) + POS(BODY(bodies, j))[k]*MASS(BODY(bodies, j))) / (MASS(BODY(bodies, i)) + MASS(BODY(bodies, j)));
-           VEL(BODY(bodies, i))[k] = (VEL(BODY(bodies, i))[k]*MASS(BODY(bodies, i)) + VEL(BODY(bodies, j))[k]*MASS(BODY(bodies, j))) / (MASS(BODY(bodies, i)) + MASS(BODY(bodies, j)));
-       }
-       MASS(BODY(bodies, i)) += MASS(BODY(bodies, j));
-       MASS(BODY(bodies, j)) = 0;
-       RADI(BODY(bodies, i)) = powf(powf(RADI(BODY(bodies, i)), dims) + powf(RADI(BODY(bodies, j)), dims), 1.0/dims);
-       RADI(BODY(bodies, j)) = 0;
+        merge(bodies, i, j, dims);
+    }
+}
+
+__device__
+void merge(K* bodies, int i, int j, int dims) {
+   for (int k=0; k<dims; ++k) {
+       POS(BODY(bodies, i))[k] = (POS(BODY(bodies, i))[k]*MASS(BODY(bodies, i)) + POS(BODY(bodies, j))[k]*MASS(BODY(bodies, j))) / (MASS(BODY(bodies, i)) + MASS(BODY(bodies, j)));
+       VEL(BODY(bodies, i))[k] = (VEL(BODY(bodies, i))[k]*MASS(BODY(bodies, i)) + VEL(BODY(bodies, j))[k]*MASS(BODY(bodies, j))) / (MASS(BODY(bodies, i)) + MASS(BODY(bodies, j)));
+   }
+   MASS(BODY(bodies, i)) += MASS(BODY(bodies, j));
+   MASS(BODY(bodies, j)) = 0;
+   RADI(BODY(bodies, i)) = powf(powf(RADI(BODY(bodies, i)), dims) + powf(RADI(BODY(bodies, j)), dims), 1.0/dims);
+   RADI(BODY(bodies, j)) = 0;
+}
+
+__global__
+void find_merge_candidates(K* bodies, int n, int dims, int *wannabe) {
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    if (x >= n)
+        return;
+    wannabe[x] = x;
+    for (int i=0; i<x; ++i) {
+        if (is_nearby(BODY(bodies, i), BODY(bodies, x), dims)) {
+            wannabe[x] = i;
+            break;
+        }
+    }
+}
+
+__global__
+void merge_using_candidates(K* bodies, int n, int dims, int *wannabe) {
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    if (x >= n)
+        return;
+    if (wannabe[x] != x)
+        return;
+
+    for (int i=x+1; i<n; ++i) {
+        if (wannabe[i] == x) {
+            merge(bodies, x, i, dims);
+        }
     }
 }
 
 __global__
 void glue_nearby(K* bodies, int n, int dims) {
-    // TODO(laiqu) implement this as proper Kernel.
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
             if (i == j) continue;
