@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
             std::cout << std::fixed << body << std::endl; 
         }
         for (K i = 0; i < sim_length; i += tick) {
-            auto result = n_bodies::simulate(cu_bodies, n, tick);
+            auto result = n_bodies::simulate(cu_bodies, n, tick, dims);
             std::cout << "After " << i << ":" << std::endl;
             for (const auto& body : result) {
                 std::cout << std::fixed << body << std::endl;  
