@@ -101,8 +101,8 @@ void glue_nearby(K* bodies, int n, int dims) {
 }
 
 __global__
-void glue_nearby_parallel(K* bodies, int n, int dims, int d) {
-    int x = THREADS_X * THREADS_Y * (BLOCKS_Y * blockIdx.x + blockIdx.y) + THREADS_Y * threadIdx.x + threadIdx.y;
+void glue_nearby_parallel(K* bodies, int n, int dims, int d, int BLOCKS_Y) {
+    int x = 1024 * (BLOCKS_Y * blockIdx.x + blockIdx.y) + 32 * threadIdx.x + threadIdx.y;
 
     if (x % (2 * d) >= d || x + d >= n) return;
 
