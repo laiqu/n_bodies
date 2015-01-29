@@ -1,6 +1,8 @@
 # n_bodies
 CUDA N-body simulation.
 
+Visualization needs n_bodies.ptx in working directory, it is also reading its input from file named.. "out", in CWD as well.
+
 Simulator part should be easy to compile using provided Makefile (it's possible that CUDA_INSTALL_PATH variable needs some tweaking).
 This part is only using CUDA apart from standard libraries.
 
