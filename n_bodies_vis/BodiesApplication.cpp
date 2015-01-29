@@ -30,23 +30,30 @@ class BodiesFrameListener : public Ogre::FrameListener
         if (BRUTAL_ONLINE_SIMULATE_FLAG)
             n_bodies::init();
 		in.open("out");
-		in >> dims >> n;
         std::string line;
+        std::getline(in, line);
+        std::istringstream dss(line);
+        dss >> dims;
+        if (!(dss >> n)) {
+            std::getline(in, line);
+            std::istringstream nss(line);
+            nss >> n;
+        }
         float time_stamp, tmp;            
         while (std::getline(in, line)) {
             std::istringstream iss(line);
-            if (line.size() < 50) {
-                iss >> time_stamp;
-                if (BRUTAL_ONLINE_SIMULATE_FLAG && bodies.size() > 0) {
-                    dev_bodies = n_bodies::moveBodiesToDevice(bodies.back().second);
-                    break;
-                }
+            iss >> time_stamp;
+            if (!(iss >> tmp)) {
                 bodies.push_back(std::make_pair(time_stamp,
                               std::vector<n_bodies::Body>()));		
             } else {
+                std::istringstream bss(line);
                 bodies.back().second.push_back(
-                    n_bodies::Body::read_from_stream(iss, dims));
+                    n_bodies::Body::read_from_stream(bss, dims));
             }
+        }
+        if (BRUTAL_ONLINE_SIMULATE_FLAG) {
+            dev_bodies = n_bodies::moveBodiesToDevice(bodies[0].second);
         }
 
 		in.close();		
