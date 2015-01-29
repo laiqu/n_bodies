@@ -5,6 +5,8 @@
 #include <fstream>
 #include <algorithm>
 #include <vector>
+#include <sstream>
+#include <string>
  
 Application::Application(void)
 {
@@ -25,21 +27,25 @@ class BodiesFrameListener : public Ogre::FrameListener
 	BodiesFrameListener(Ogre::SceneManager* mSceneMgr_) : mSceneMgr(mSceneMgr_),
      sim_time(0), lastNode(0), current(0), name_spam(0) {
 		std::ifstream in;
-        n_bodies::init();
+        if (BRUTAL_ONLINE_SIMULATE_FLAG)
+            n_bodies::init();
 		in.open("out");
 		in >> dims >> n;
-        while (in.good()) {
-            float time_stamp;
-            in >> time_stamp;
-            bodies.push_back(std::make_pair(time_stamp,
-                                      std::vector<n_bodies::Body>()));		
-            for (int i = 0; i < n; i++) {
+        std::string line;
+        float time_stamp, tmp;            
+        while (std::getline(in, line)) {
+            std::istringstream iss(line);
+            if (line.size() < 50) {
+                iss >> time_stamp;
+                if (BRUTAL_ONLINE_SIMULATE_FLAG && bodies.size() > 0) {
+                    dev_bodies = n_bodies::moveBodiesToDevice(bodies.back().second);
+                    break;
+                }
+                bodies.push_back(std::make_pair(time_stamp,
+                              std::vector<n_bodies::Body>()));		
+            } else {
                 bodies.back().second.push_back(
-                    n_bodies::Body::read_from_stream(in, dims));
-            }
-            if (BRUTAL_ONLINE_SIMULATE_FLAG) {
-                dev_bodies = n_bodies::moveBodiesToDevice(bodies.back().second);
-                break;
+                    n_bodies::Body::read_from_stream(iss, dims));
             }
         }
 
